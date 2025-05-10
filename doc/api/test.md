@@ -400,7 +400,7 @@ The test runner will continue to run until the process is terminated.
 ## Global setup and teardown
 
 <!-- YAML
-added: REPLACEME
+added: v24.0.0
 -->
 
 > Stability: 1.0 - Early development
@@ -472,9 +472,12 @@ By default, Node.js will run all files matching these patterns:
 Unless [`--no-experimental-strip-types`][] is supplied, the following
 additional patterns are also matched:
 
-* `**/test/**/*-test.{cts,mts,ts}`
-* `**/test/**/*.test.{cts,mts,ts}`
-* `**/test/**/*_test.{cts,mts,ts}`
+* `**/*.test.{cts,mts,ts}`
+* `**/*-test.{cts,mts,ts}`
+* `**/*_test.{cts,mts,ts}`
+* `**/test-*.{cts,mts,ts}`
+* `**/test.{cts,mts,ts}`
+* `**/test/**/*.{cts,mts,ts}`
 
 Alternatively, one or more glob patterns can be provided as the
 final argument(s) to the Node.js command, as shown below.
@@ -1455,7 +1458,7 @@ added:
   - v20.13.0
 changes:
   - version:
-    - REPLACEME
+    - v24.0.0
     pr-url: https://github.com/nodejs/node/pull/56664
     description: This function no longer returns a `Promise`.
 -->
@@ -1512,7 +1515,7 @@ added:
   - v16.17.0
 changes:
   - version:
-    - REPLACEME
+    - v24.0.0
     pr-url: https://github.com/nodejs/node/pull/56664
     description: This function no longer returns a `Promise`.
   - version:
@@ -2170,7 +2173,7 @@ added:
   - v20.18.0
 changes:
   - version:
-    - REPLACEME
+    - v24.0.0
     pr-url: https://github.com/nodejs/node/pull/58007
     description: Support JSON modules.
 -->
@@ -3616,7 +3619,7 @@ added:
   - v16.17.0
 changes:
   - version:
-    - REPLACEME
+    - v24.0.0
     pr-url: https://github.com/nodejs/node/pull/56664
     description: This function no longer returns a `Promise`.
   - version:
