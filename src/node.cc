@@ -712,9 +712,11 @@ void ResetStdio() {
       while (err == -1 && errno == EINTR);  // NOLINT
       CHECK_EQ(0, pthread_sigmask(SIG_UNBLOCK, &sa, nullptr));
 
-      // Normally we expect err == 0. But if macOS App Sandbox is enabled,
-      // tcsetattr will fail with err == -1 and errno == EPERM.
-      CHECK_IMPLIES(err != 0, err == -1 && errno == EPERM);
+      // We don't check the return value of tcsetattr() because it can fail
+      // for a number of reasons, none that we can do anything about. Examples:
+      // - if macOS App Sandbox is enabled, tcsetattr fails with EPERM
+      // - if the process group is orphaned, e.g. because the user logged out,
+      //   tcsetattr fails with EIO
     }
   }
 #endif  // __POSIX__
@@ -821,7 +823,7 @@ static ExitCode InitializeNodeWithArgsInternal(
     std::vector<std::string>* exec_argv,
     std::vector<std::string>* errors,
     ProcessInitializationFlags::Flags flags) {
-  // Make sure InitializeNodeWithArgs() is called only once.
+  // Make sure InitializeNodeWithArgsInternal() is called only once.
   CHECK(!init_called.exchange(true));
 
   // Initialize node_start_time to get relative uptime.
@@ -1019,14 +1021,6 @@ static ExitCode InitializeNodeWithArgsInternal(
   return ExitCode::kNoFailure;
 }
 
-int InitializeNodeWithArgs(std::vector<std::string>* argv,
-                           std::vector<std::string>* exec_argv,
-                           std::vector<std::string>* errors,
-                           ProcessInitializationFlags::Flags flags) {
-  return static_cast<int>(
-      InitializeNodeWithArgsInternal(argv, exec_argv, errors, flags));
-}
-
 static std::shared_ptr<InitializationResultImpl>
 InitializeOncePerProcessInternal(const std::vector<std::string>& args,
                                  ProcessInitializationFlags::Flags flags =
@@ -1173,10 +1167,7 @@ InitializeOncePerProcessInternal(const std::vector<std::string>& args,
     }
 #endif
     if (!crypto::ProcessFipsOptions()) {
-      // XXX: ERR_GET_REASON does not return something that is
-      // useful as an exit code at all.
-      result->exit_code_ =
-          static_cast<ExitCode>(ERR_GET_REASON(ERR_peek_error()));
+      result->exit_code_ = ExitCode::kGenericUserError;
       result->early_return_ = true;
       result->errors_.emplace_back(
           "OpenSSL error when trying to enable FIPS:\n" +
@@ -1211,6 +1202,14 @@ InitializeOncePerProcessInternal(const std::vector<std::string>& args,
     result->platform_ = per_process::v8_platform.Platform();
   }
 
+  if (!(flags & ProcessInitializationFlags::kNoInitializeCppgc)) {
+    v8::PageAllocator* allocator = nullptr;
+    if (result->platform_ != nullptr) {
+      allocator = result->platform_->GetPageAllocator();
+    }
+    cppgc::InitializeProcess(allocator);
+  }
+
   if (!(flags & ProcessInitializationFlags::kNoInitializeV8)) {
     V8::Initialize();
 
@@ -1218,14 +1217,6 @@ InitializeOncePerProcessInternal(const std::vector<std::string>& args,
     // TODO(legendecas): Replace this global disablement with case suppressions.
     // https://github.com/nodejs/node-v8/issues/301
     absl::SetMutexDeadlockDetectionMode(absl::OnDeadlockCycle::kIgnore);
-  }
-
-  if (!(flags & ProcessInitializationFlags::kNoInitializeCppgc)) {
-    v8::PageAllocator* allocator = nullptr;
-    if (result->platform_ != nullptr) {
-      allocator = result->platform_->GetPageAllocator();
-    }
-    cppgc::InitializeProcess(allocator);
   }
 
 #if NODE_USE_V8_WASM_TRAP_HANDLER
